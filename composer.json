@@ -1,0 +1,24 @@
+{
+    "name": "crystoline/laravel-rest-api",
+    "description": "Laravel Rest Api Library. Write produce rest apis very fast",
+    "keywords": ["laravel", "rest", "api", "rest api"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Adekunle Adekoya",
+            "email": "crystoline@gmail.com"
+        }
+    ],
+    "require": {},
+	"autoload": {
+        "psr-4": {
+            "Crystoline\\LaraRestApi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Crystoline\\LaraRestApi\\": "src/"
+        }
+    }
+}
