@@ -1,13 +1,12 @@
 <?php
+
 namespace Crystoline\LaraRestApi;
 
-use App\Models\ApiModelTrait;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 
 /**
  * Rest Api trait for Api Controller. Provide CRUD.
@@ -87,20 +86,11 @@ trait RestApiTrait
     ];
 
 
-
-
     /**
      * @var int Number of pages
      */
     protected $pages = 50;
 
-    public static function getPages() : int {
-        return 50;
-    }
-
-    public static function getModel() : string {
-        return Model::class;
-    }
     /**
      * List Objects.
      * @param Request $request
@@ -109,12 +99,12 @@ trait RestApiTrait
     public function index(Request $request)
     {
 
-        /** @var ApiModelTrait $m */
+        /** @var Model $m */
         $m = self::getModel();
-        $searchables = $m::searchable();
-        $orderBy =  $m::orderBy()? : [];
         $data = $m::query();
         $pages = self::getPages();
+        $searchables = self::searchable();
+        $orderBy = self::orderBy() ?: [];
         self::filter($request, $data);
         self::doSearch($request, $data, $searchables);
         self::doOrderBy($request, $data, $orderBy);
@@ -130,21 +120,39 @@ trait RestApiTrait
     }
 
     /**
-     * Paginate Data
-     * @param Request $request
-     * @param Builder $data
-     * @param int     $pages
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator|Builder
+     * get The Model name used. with full namespace
+     * @return string
      */
-    public  static function paginate(Request $request, $data, $pages = 50)
+    public static function getModel(): string
     {
-        $should_paginate = $request->input('paginate', 'yes');
+        return Model::class;
+    }
 
-        if ('yes' == $should_paginate) {
-            $data = $data->paginate($request->input('pages',$pages));
-        }
+    /**
+     * return number pages for pagination
+     * @return int
+     */
+    public static function getPages(): int
+    {
+        return 50;
+    }
 
-        return $data;
+    /**
+     * Return array of searchable fields
+     * @return array
+     */
+    public static function searchable(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array
+     */
+    public static function orderBy(): array
+    {
+        return [
+        ];
     }
 
     /**
@@ -165,7 +173,7 @@ trait RestApiTrait
      */
     public static function doSearch(Request $request, Builder $builder, $searchables) /*:Builder*/
     {
-        $builder->where(function (Builder $builder) use ($request, $searchables){
+        $builder->where(function (Builder $builder) use ($request, $searchables) {
             if ($search = $request->input('search')) {
                 $keywords = explode(' ', trim($search));
                 if ($searchables) {
@@ -196,8 +204,9 @@ trait RestApiTrait
      * @param Builder $builder
      * @param array $orderBy
      */
-    public static function doOrderBy(Request $request, Builder $builder,array $orderBy){
-        if($orderBy){
+    private static function doOrderBy(Request $request, Builder $builder, array $orderBy)
+    {
+        if ($orderBy) {
             foreach ($orderBy as $field => $direction) {
                 $builder->orderBy($field, $direction);
             }
@@ -205,10 +214,28 @@ trait RestApiTrait
     }
 
     /**
+     * Paginate Data
+     * @param Request $request
+     * @param Builder $data
+     * @param int $pages
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator|Builder
+     */
+    public static function paginate(Request $request, $data, $pages = 50)
+    {
+        $should_paginate = $request->input('paginate', 'yes');
+
+        if ('yes' == $should_paginate) {
+            $data = $data->paginate($request->input('pages', $pages));
+        }
+
+        return $data;
+    }
+
+    /**
      * Perform action before data list
      * @param $data
      */
-    public function beforeList($data)
+    protected function beforeList($data)
     {
     }
 
@@ -245,10 +272,10 @@ trait RestApiTrait
      */
     public function store(Request $request)
     {
-        /** @var ApiModelTrait $m */
+        /** @var Model $m */
         $m = self::getModel();
-        $rules = $m::getValidationRules();
-        $message = $m::getValidationMessages();
+        $rules = self::getValidationRules();
+        $message = self::getValidationMessages();
 
         // $validator = Validator::make($request->all(), $rules, $message);
         $this->validate($request, $rules, $message);
@@ -293,14 +320,19 @@ trait RestApiTrait
     }
 
     /**
-     * Perform action after data store
-     * @param Request $request
-     * @param $data
-     * @return bool
+     * @return array
      */
-    public function afterStore(Request $request, $data): bool
+    public static function getValidationRules(): array
     {
-        return true;
+        return [];
+    }
+
+    /**
+     * @return array
+     */
+    public static function getValidationMessages(): array
+    {
+        return [];
     }
 
     /**
@@ -308,17 +340,54 @@ trait RestApiTrait
      * @param Request $request
      * @return bool
      */
-    public function beforeStore(Request $request): bool
+    protected function beforeStore(Request $request): bool
     {
         return true;
     }
 
     /**
-     * Perform action before data deletion
+     * Perform file upload for request
      * @param Request $request
+     * @param Model $object
+     */
+    public static function doUpload(Request $request, $object = null)
+    {
+        //dd('kdkd');
+        $data = $request->all();
+        foreach ($data as $key => $val) {
+
+            if ($request->hasFile($key) and $request->file($key)->isValid()) {
+
+                $original = isset($object->$key) ? $object->$key : null;
+
+                $interfaces = class_implements(self::class);
+                $base = (isset($interfaces[ISchoolFileUpload::class])) ? self::fileBasePath($request) : '';
+                if ($base) {
+                    $base = trim($base, '/,\\') . '/';
+                }
+                $path = $request->$key->store('public/' . $base . $key);
+                $path = str_replace('public/', 'storage/', $path);
+
+                $path_url = asset($path);
+
+                $request->files->remove($key);
+                $request->merge([$key => $path_url]);
+
+                if (!is_null($original)) {
+                    Storage::delete(str_replace('storage/', 'public/', $original));
+                }
+            }
+        }
+
+    }
+
+    /**
+     * Perform action after data store
+     * @param Request $request
+     * @param $data
      * @return bool
      */
-    public function beforeDelete(Request $request): bool
+    protected function afterStore(Request $request, $data): bool
     {
         return true;
     }
@@ -333,7 +402,7 @@ trait RestApiTrait
      */
     public function update(Request $request, int $id)
     {
-        /** @var ApiModelTrait $m */
+        /** @var Model $m */
         $m = self::getModel();
         $model = $m::find($id);
 
@@ -341,13 +410,13 @@ trait RestApiTrait
             return response()->json(['message' => 'Record was not found'], self::$STATUS_CODE_NOT_FOUND);
         }
 
-        $rules = $model->getValidationRulesForUpdate();
-        $message = $m::getValidationMessages();
+        $rules = self::getValidationRulesForUpdate($model);
+        $message = self::getValidationMessages();
         $this->validate($request, $rules, $message);
-       /*  $validator = Validator::make($request->all(), $rules, $message);
-        if ($validator->fails()) {
-            return  response()->json($validator->errors(), self::$STATUS_CODE_NOT_VALID);
-        } */
+        /*  $validator = Validator::make($request->all(), $rules, $message);
+         if ($validator->fails()) {
+             return  response()->json($validator->errors(), self::$STATUS_CODE_NOT_VALID);
+         } */
 
         DB::beginTransaction();
         if (!$this->beforeUpdate($request)) {
@@ -357,8 +426,8 @@ trait RestApiTrait
         }
         self::doUpload($request, $model);
         $fieldsToUpdate = (method_exists($model, 'fieldsToUpdate')
-                           and !empty($model->fieldsToUpdate())) ?
-            $request->only($model->fieldsToUpdate()) : $request->input();
+            and !empty(self::fieldsToUpdate())) ?
+            $request->only(self::fieldsToUpdate()) : $request->input();
 
         try {
             $model->update($fieldsToUpdate);
@@ -380,14 +449,29 @@ trait RestApiTrait
     }
 
     /**
-     * Run after update action
-     * @param Request $request
-     * @param $data
-     * @return bool
+     * @param Model $model
+     * @return array
      */
-    public function afterUpdate(Request $request, $data): bool
+    public static function getValidationRulesForUpdate(Model $model)
     {
-        return true;
+        $id = $model->id;
+        $rules = self::getValidationRules();
+        $fields = self::getUniqueFields();
+        foreach ($fields as $field) {
+            if (isset($rules[$field])) {
+                $rules[$field] .= ',' . $id;
+            }
+        }
+        return $rules;
+    }
+
+    /**
+     * Return array of unique field. Used for validation
+     * @return array
+     */
+    public static function getUniqueFields(): array
+    {
+        return [];
     }
 
     /**
@@ -396,6 +480,26 @@ trait RestApiTrait
      * @return bool
      */
     public function beforeUpdate(Request $request): bool
+    {
+        return true;
+    }
+
+    /**
+     * get fields to be update
+     * @return array
+     */
+    public static function fieldsToUpdate()
+    {
+        return [];
+    }
+
+    /**
+     * Run after update action
+     * @param Request $request
+     * @param $data
+     * @return bool
+     */
+    public function afterUpdate(Request $request, $data): bool
     {
         return true;
     }
@@ -413,13 +517,23 @@ trait RestApiTrait
         if (is_null($m::find($id))) {
             return response()->json(['record was not found'], self::$STATUS_CODE_NOT_FOUND);
         }
-        try{
+        try {
             $m::destroy($id);
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
 
         }
 
         return response()->json(['message' => 'record was deleted'], self::$STATUS_CODE_DONE);
+    }
+
+    /**
+     * Perform action before data deletion
+     * @param Request $request
+     * @return bool
+     */
+    protected function beforeDelete(Request $request): bool
+    {
+        return true;
     }
 
     /**
@@ -433,51 +547,5 @@ trait RestApiTrait
         return response()->json($data, $this->statusCodes[$status]);
     }
 
-    /**
-     * Perform file upload for request
-     * @param Request $request
-     * @param Model $object
-     */
-    public static function doUpload(Request $request, $object = null){
-        //dd('kdkd');
-        $data = $request->all();
-        foreach ($data as $key => $val) {
-
-            if ($request->hasFile($key) and $request->file($key)->isValid()) {
-
-                $original = isset($object->$key) ? $object->$key : null;
-
-                $interfaces = class_implements( self::class );
-                $base = (isset( $interfaces[ISchoolFileUpload::class] ))? self::fileBasePath($request): '';
-                if($base){
-                    $base = trim($base, '/,\\').'/';
-                }
-                $path = $request->$key->store('public/'.$base. $key);
-                $path = str_replace('public/', 'storage/', $path);
-
-                $path_url = asset( $path);
-
-                $request->files->remove($key);
-                $request->merge([$key => $path_url]);
-
-                if (!is_null($original)) {
-                    Storage::delete(str_replace('storage/','public/',  $original));
-                }
-            }
-        }
-
-    }
-
-    private static function validationForCreate(){
-
-    }
-
-    private static function validationForUpdate(){
-
-    }
-
-   /* public static function fileBasePath(Request $request){
-        return '';
-    }*/
 
 }
