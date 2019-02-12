@@ -160,7 +160,7 @@ trait RestApiTrait
      * @param Request $request
      * @param $query
      */
-    protected static function filter(Request $request, $query)
+    public static function filter(Request $request, $query)
     {
     }
 
@@ -204,7 +204,7 @@ trait RestApiTrait
      * @param Builder $builder
      * @param array $orderBy
      */
-    private static function doOrderBy(Request $request, Builder $builder, array $orderBy)
+    public static function doOrderBy(Request $request, Builder $builder, array $orderBy)
     {
         if ($orderBy) {
             foreach ($orderBy as $field => $direction) {
@@ -235,7 +235,7 @@ trait RestApiTrait
      * Perform action before data list
      * @param $data
      */
-    protected function beforeList($data)
+    public function beforeList($data)
     {
     }
 
@@ -261,7 +261,7 @@ trait RestApiTrait
      * Perform action before data show
      * @param $data
      */
-    protected function beforeShow($data)
+    public function beforeShow($data)
     {
     }
 
@@ -340,7 +340,7 @@ trait RestApiTrait
      * @param Request $request
      * @return bool
      */
-    protected function beforeStore(Request $request): bool
+    public function beforeStore(Request $request): bool
     {
         return true;
     }
@@ -387,7 +387,7 @@ trait RestApiTrait
      * @param $data
      * @return bool
      */
-    protected function afterStore(Request $request, $data): bool
+    public function afterStore(Request $request, $data): bool
     {
         return true;
     }
@@ -531,7 +531,7 @@ trait RestApiTrait
      * @param Request $request
      * @return bool
      */
-    protected function beforeDelete(Request $request): bool
+    public function beforeDelete(Request $request): bool
     {
         return true;
     }

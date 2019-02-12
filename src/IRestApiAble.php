@@ -1,7 +1,8 @@
 <?php
 
 namespace Crystoline\LaraRestApi;
-
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 interface IRestApiAble
 {
     public static function getModel() : string ;
@@ -58,7 +59,7 @@ interface IRestApiAble
      * Perform action before data show
      * @param $data
      */
-   function beforeShow($data);
+    public function beforeShow($data);
 
     /**
      * Store Record.
