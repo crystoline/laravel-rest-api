@@ -8,12 +8,12 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/crystoline/laravel-rest-api.svg?style=flat-square)](https://packagist.org/packages/crystoline/laravel-rest-api)
 [![License](https://img.shields.io/packagist/l/crystoline/laravel-rest-api.svg?style=flat-square)](https://packagist.org/packages/crystoline/laravel-rest-api)
 
-##Description
+## Description
 Provide rest apis in Laravel in easy steps. Avoid Repeated crud/Bread Process. This helps you to focus on the business logic
 
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/crystoline)
 
-##Installation 
+## Installation 
 
 ```
 composer require crystoline/laravel-rest-api
@@ -26,13 +26,11 @@ composer require crystoline/laravel-rest-api
 ```php
 <?php
 
-namespace App\Http\Controllers\Api\v1\Admin;
+namespace App\Http\Controllers;
 
 use Crystoline\LaraRestApi\RestApiTrait;
 use Crystoline\LaraRestApi\IRestApiAble;
 use Crystoline\LaraRestApi\TestModel;
-
-use App\Http\Controllers\Controller;
 
 class TestController extends Controller implements IRestApiAble
 {
@@ -73,4 +71,42 @@ class TestController extends Controller implements IRestApiAble
     Route::put('delete/{id}', 'TestController@destroy');
 
 });
+```
+#### Events
+You add events before and after controller action. beforeList,afterList, beforeStore, afterStore, beforeShow, afterShow etc.
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Crystoline\LaraRestApi\RestApiTrait;
+use Crystoline\LaraRestApi\IRestApiAble;
+use Crystoline\LaraRestApi\TestModel;
+use Illuminate\Http\Request;
+
+class TestController extends Controller implements IRestApiAble
+{
+    use RestApiTrait;
+    
+    /**
+    * Define the Eloquent Model.
+    * This line is required.   
+    */
+    public static function getModel() : string  {
+        return TestModel::class;
+    }
+    
+    
+ public function beforeStore(Request $request): bool
+    {
+        $password = $request->input('password');
+        if(!empty($password)) {
+            $request->merge(['password' => bcrypt($password)]);
+            return true;
+        }
+        return false;
+    }
+}
+
 ```
