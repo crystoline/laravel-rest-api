@@ -64,13 +64,18 @@ class TestController extends Controller implements IRestApiAble
 <?php
 
     Route::prefix('users')->group( function () {
-    Route::get('', 'TestController@index');
-    Route::get('show/{id}', 'TestController@show');
-    Route::post('store', 'TestController@store');
-    Route::put('update/{id}', 'TestController@update');
-    Route::put('delete/{id}', 'TestController@destroy');
+        Route::get('', 'TestController@index');
+        Route::get('show/{id}', 'TestController@show');
+        Route::post('store', 'TestController@store');
+        Route::put('update/{id}', 'TestController@update');
+        Route::put('delete/{id}', 'TestController@destroy');
 
-});
+    });
+```
+or 
+```php
+<?php
+    Route::resource('users', 'TestController');
 ```
 #### Events
 You add events before and after controller action. beforeList,afterList, beforeStore, afterStore, beforeShow, afterShow etc.
