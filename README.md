@@ -77,6 +77,68 @@ or
 <?php
     Route::resource('users', 'TestController');
 ```
+#### Filter
+You can add filter for the list method 
+```php
+<?php
+namespace App\Http\Controllers;
+
+use Crystoline\LaraRestApi\RestApiTrait;
+use Crystoline\LaraRestApi\IRestApiAble;
+use Crystoline\LaraRestApi\TestModel;
+use Illuminate\Http\Request;
+class TestController extends Controller implements IRestApiAble
+{
+    use RestApiTrait;
+    
+    /**
+    * Define the Eloquent Model.
+    * This line is required.   
+    */
+    public static function getModel() : string  {
+        return TestModel::class;
+    }
+    public static function filter(Request $request, $query)
+    {
+        if($request->input('user_id')){
+            $user_id = $request->input('user_id');
+            $query->where(user_id, $user_id);
+        }
+    }
+}
+```
+
+#### Search
+Search has been provided by default, pass search query in query/post parameter ('search'')
+```php
+<?php
+namespace App\Http\Controllers;
+
+use Crystoline\LaraRestApi\RestApiTrait;
+use Crystoline\LaraRestApi\IRestApiAble;
+use Crystoline\LaraRestApi\TestModel;
+use Illuminate\Http\Request;
+class TestController extends Controller implements IRestApiAble
+{
+    use RestApiTrait;
+    
+    /**
+    * Define the Eloquent Model.
+    * This line is required.   
+    */
+    public static function getModel() : string  {
+        return TestModel::class;
+    }
+    public static function orderBy(): array
+   {
+       return [
+           'last_name' => 'ASC'
+       ];
+   }
+    
+}
+```
+
 #### Events
 You add events before and after controller action. beforeList,afterList, beforeStore, afterStore, beforeShow, afterShow etc.
 

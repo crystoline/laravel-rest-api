@@ -10,17 +10,14 @@ namespace Crystoline\LaraRestApi;
 
 use Illuminate\Http\Request;
 
-trait SchoolFileUploadTrait
+trait IFileUploadTrait
 {
 
+    /**
+     * @param Request $request
+     * @return string
+     */
     public static function fileBasePath(Request $request){
-        $conf = session('client.configuration');
-        //dd($conf->subdomain);
-
-        if($conf and !empty($conf->subdomain)){
-            return "school/{$conf->subdomain}";
-        }
-
         return '';
     }
 }

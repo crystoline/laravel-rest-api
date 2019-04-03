@@ -4,7 +4,7 @@ namespace Crystoline\LaraRestApi;
 
 use Illuminate\Http\Request;
 
-interface ISchoolFileUpload
+interface IFileUpload
 {
     /**
      * return the base path for file upload

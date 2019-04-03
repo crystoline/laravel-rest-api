@@ -270,6 +270,7 @@ trait RestApiTrait
      * Store Record.
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function store(Request $request)
     {
@@ -362,7 +363,7 @@ trait RestApiTrait
                 $original = isset($object->$key) ? $object->$key : null;
 
                 $interfaces = class_implements(self::class);
-                $base = (isset($interfaces[ISchoolFileUpload::class])) ? self::fileBasePath($request) : '';
+                $base = (isset($interfaces[IFileUpload::class])) ? self::fileBasePath($request) : '';
                 if ($base) {
                     $base = trim($base, '/,\\') . '/';
                 }
