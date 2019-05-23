@@ -4,10 +4,11 @@ namespace Crystoline\LaraRestApi;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Rest Api trait for Api Controller. Provide CRUD.
@@ -95,9 +96,9 @@ trait RestApiTrait
     /**
      * List Objects.
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
 
         /** @var Model $m */
@@ -116,8 +117,8 @@ trait RestApiTrait
         }
 
         $this->beforeList($data);
+        return $this->respond(self::$STATUS_CODE_DONE, $data);
 
-        return $this->respond($data, self::$STATUS_CODE_DONE);
     }
 
     /**
@@ -243,7 +244,7 @@ trait RestApiTrait
     /**
      * Show records.
      * @param $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function show(int $id)
     {
@@ -251,11 +252,12 @@ trait RestApiTrait
         $data = $m::find($id);
 
         if (is_null($data)) {
-            return $this->respond(['message' => 'Record was not found'], self::$STATUS_CODE_NOT_FOUND);
+            return $this->respond(self::$STATUS_CODE_NOT_FOUND, ['message' => 'Record was not found']);
         }
         $this->beforeShow($data);
 
-        return $this->respond($data, self::$STATUS_CODE_DONE);
+        return $this->respond(self::$STATUS_CODE_DONE, $data);
+
     }
 
     /**
@@ -269,29 +271,30 @@ trait RestApiTrait
     /**
      * Store Record.
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Validation\ValidationException
+     * @return JsonResponse
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         /** @var Model $m */
         $m = self::getModel();
         $rules = self::getValidationRules();
         $message = self::getValidationMessages();
 
-        // $validator = Validator::make($request->all(), $rules, $message);
-        $this->validate($request, $rules, $message);
-        /*
-           if ($validator->fails()) {
-               return  $this->respond($validator->errors(), self::$STATUS_CODE_NOT_VALID);
-           } */
+        $validator = Validator::make($request->all(), $rules, $message);
+        //$this->validate($request, $rules, $message);
+
+        if ($validator->fails()) {
+            return $this->respond(self::$STATUS_CODE_NOT_VALID, $validator->errors());
+          // return  response()->json($validator->errors(), self::$STATUS_CODE_NOT_VALID);
+        }
+
         DB::beginTransaction();
 
         //try{
         if (!$this->beforeStore($request)) {
             DB::rollback();
-
-            return $this->respond(['message' => 'could not create record (Duplicate Record)'], self::$STATUS_CODE_SERVER_ERROR);
+            return $this->respond(self::$STATUS_CODE_SERVER_ERROR, ['message' => 'could not create record (Duplicate Record)']);
+           // return response()->json(['message' => 'could not create record (Duplicate Record)'], self::$STATUS_CODE_SERVER_ERROR);
         }
         self::doUpload($request);
         $input = $request->input();
@@ -306,19 +309,21 @@ trait RestApiTrait
         //catch (\Exception $exception){
         //DB::rollback();
         //todo remove Exception message
-        //return $this->respond( ['message' => 'An error occurred while creating record: '.$exception->getMessage().', Line:'.$exception->getFile().'/'.$exception->getLine()], self::$STATUS_CODE_CONFLICT);
+        //return response()->json( ['message' => 'An error occurred while creating record: '.$exception->getMessage().', Line:'.$exception->getFile().'/'.$exception->getLine()], self::$STATUS_CODE_CONFLICT);
         //}
         if (!$this->afterStore($request, $data)) {
             DB::rollback();
 
-            return $this->respond(['message' => 'could not successfully create record'], self::$STATUS_CODE_SERVER_ERROR);
+            return $this->respond(self::$STATUS_CODE_SERVER_ERROR, ['message' => 'could not successfully create record']);
+           // return response()->json(['message' => 'could not successfully create record'], self::$STATUS_CODE_SERVER_ERROR);
         }
 
         DB::commit();
 
 
         $this->beforeShow($data);
-        return $this->respond($data, self::$STATUS_CODE_CREATED);
+        return $this->respond(self::$STATUS_CODE_CREATED, $data);
+        //return response()->json($data, self::$STATUS_CODE_CREATED);
     }
 
     /**
@@ -358,12 +363,12 @@ trait RestApiTrait
         $data = $request->all();
         foreach ($data as $key => $val) {
 
-            if ($request->hasFile($key) and $request->file($key)->isValid()) {
+            if ($request->hasFile($key) && $request->file($key)->isValid()) {
 
-                $original = isset($object->$key) ? $object->$key : null;
+                $original = $object->$key ?? null;
 
                 $interfaces = class_implements(self::class);
-                $base = (isset($interfaces[IFileUpload::class])) ? self::fileBasePath($request) : '';
+                $base = isset($interfaces[IFileUpload::class]) ? self::fileBasePath($request) : '';
                 if ($base) {
                     $base = trim($base, '/,\\') . '/';
                 }
@@ -391,6 +396,7 @@ trait RestApiTrait
      */
     public function afterStore(Request $request, $data): bool
     {
+        $this->beforeShow($data);
         return true;
     }
 
@@ -400,31 +406,32 @@ trait RestApiTrait
      * @param Request $request
      * @param $id
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function update(Request $request, int $id)
+    public function update(Request $request, int $id): JsonResponse
     {
         /** @var Model $m */
         $m = self::getModel();
         $model = $m::find($id);
 
-        if (is_null($model)) {
-            return $this->respond(['message' => 'Record was not found'], self::$STATUS_CODE_NOT_FOUND);
+        if ($model === null) {
+            return $this->respond(self::$STATUS_CODE_NOT_FOUND, ['message' => 'Record was not found']);
         }
 
         $rules = self::getValidationRulesForUpdate($model);
         $message = self::getValidationMessages();
-        $this->validate($request, $rules, $message);
-        /*  $validator = Validator::make($request->all(), $rules, $message);
+        //$this->validate($request, $rules, $message);
+        $validator = Validator::make($request->all(), $rules, $message);
          if ($validator->fails()) {
-             return  $this->respond($validator->errors(), self::$STATUS_CODE_NOT_VALID);
-         } */
+             return $this->respond(self::$STATUS_CODE_NOT_VALID, $validator->errors());
+             //return  response()->json($validator->errors(), self::$STATUS_CODE_NOT_VALID);
+         }
 
         DB::beginTransaction();
         if (!$this->beforeUpdate($request)) {
             DB::rollback();
-
-            return $this->respond(['message' => 'could not update record'], self::$STATUS_CODE_SERVER_ERROR);
+            return $this->respond(self::$STATUS_CODE_SERVER_ERROR, ['message' => 'could not update record']);
+            //return response()->json(['message' => 'could not update record'], self::$STATUS_CODE_SERVER_ERROR);
         }
         self::doUpload($request, $model);
         $fieldsToUpdate = (method_exists($model, 'fieldsToUpdate')
@@ -436,25 +443,26 @@ trait RestApiTrait
         } catch (\Exception $exception) {
             DB::rollback();
             //todo remove Exception message
-            return $this->respond(['message' => 'An error occurred while updating record: '], 500);
+           // return response()->json(['message' => 'An error occurred while updating record: '], 500);
+            return $this->respond(self::$STATUS_CODE_SERVER_ERROR, ['message' => 'An error occurred while updating record: ']);
         }
         if (!$this->afterUpdate($request, $model)) {
             DB::rollback();
-
-            return $this->respond(['message' => 'could not successfully update record'], self::$STATUS_CODE_SERVER_ERROR);
+            return $this->respond(self::$STATUS_CODE_SERVER_ERROR, ['message' => 'could not successfully update record']);
+            //return response()->json(['message' => 'could not successfully update record'], self::$STATUS_CODE_SERVER_ERROR);
         }
 
         DB::commit();
 
-
-        return $this->respond($model, self::$STATUS_CODE_DONE);
+        return $this->respond(self::$STATUS_CODE_DONE, $model);
+        //return response()->json($model, self::$STATUS_CODE_DONE);
     }
 
     /**
      * @param Model $model
      * @return array
      */
-    public static function getValidationRulesForUpdate(Model $model)
+    public static function getValidationRulesForUpdate(Model $model): array
     {
         $id = $model->id;
         $rules = self::getValidationRules();
@@ -490,7 +498,7 @@ trait RestApiTrait
      * get fields to be update
      * @return array
      */
-    public static function fieldsToUpdate()
+    public static function fieldsToUpdate(): array
     {
         return [];
     }
@@ -503,6 +511,7 @@ trait RestApiTrait
      */
     public function afterUpdate(Request $request, $data): bool
     {
+        $this->beforeShow($data);
         return true;
     }
 
@@ -511,13 +520,14 @@ trait RestApiTrait
      *
      * @param $id
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function destroy(int $id)
     {
         $m = self::getModel();
-        if (is_null($m::find($id))) {
-            return $this->respond(['record was not found'], self::$STATUS_CODE_NOT_FOUND);
+        if ($m::find($id) === null) {
+            //return response()->json(['record was not found'], self::$STATUS_CODE_NOT_FOUND);
+            return $this->respond(self::$STATUS_CODE_NOT_FOUND, ['message' => 'record was not found']);
         }
         try {
             $m::destroy($id);
@@ -525,7 +535,8 @@ trait RestApiTrait
 
         }
 
-        return $this->respond(['message' => 'record was deleted'], self::$STATUS_CODE_DONE);
+        return $this->respond(self::$STATUS_CODE_DONE, ['message' => 'record was deleted']);
+        //return response()->json(['message' => 'record was deleted'], self::$STATUS_CODE_DONE);
     }
 
     /**
@@ -542,12 +553,12 @@ trait RestApiTrait
      * @param $status
      * @param array $data
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    protected function respond($status, $data = [])
+    protected function respond($status, $data = []): JsonResponse
     {
-        return Response::json($data, $this->statusCodes[$status]);
-        //return $this->respond($data, $this->statusCodes[$status]);
+        $status = array_key_exists($status, $this->statusCodes)? $this->statusCodes[$status]: $status;
+        return response()->json($data, $status);
     }
 
 
