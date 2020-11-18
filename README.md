@@ -87,7 +87,7 @@ use Crystoline\LaraRestApi\RestApiTrait;
 use Crystoline\LaraRestApi\IRestApiAble;
 use Crystoline\LaraRestApi\TestModel;
 use Illuminate\Http\Request;
-class TestController extends Controller implements IRestApiAble
+class TestController2 extends Controller implements IRestApiAble
 {
     use RestApiTrait;
     
@@ -107,7 +107,6 @@ class TestController extends Controller implements IRestApiAble
     }
 }
 ```
-
 #### Search
 Search has been provided by default, pass search query in query/post parameter ('search'')
 ```php
@@ -118,7 +117,36 @@ use Crystoline\LaraRestApi\RestApiTrait;
 use Crystoline\LaraRestApi\IRestApiAble;
 use Crystoline\LaraRestApi\TestModel;
 use Illuminate\Http\Request;
-class TestController extends Controller implements IRestApiAble
+class TestController3 extends Controller implements IRestApiAble
+{
+    use RestApiTrait;
+    
+    /**
+    * Define the Eloquent Model.
+    * This line is required.   
+    */
+    public static function getModel() : string  {
+        return TestModel::class;
+    }
+    public static function searchable(): array
+   {
+       return [
+           'last_name', 'first_name'
+       ];
+   }
+    
+}
+```
+#### Sorting
+```php
+<?php
+namespace App\Http\Controllers;
+
+use Crystoline\LaraRestApi\RestApiTrait;
+use Crystoline\LaraRestApi\IRestApiAble;
+use Crystoline\LaraRestApi\TestModel;
+use Illuminate\Http\Request;
+class TestController4 extends Controller implements IRestApiAble
 {
     use RestApiTrait;
     
@@ -152,7 +180,7 @@ use Crystoline\LaraRestApi\IRestApiAble;
 use Crystoline\LaraRestApi\TestModel;
 use Illuminate\Http\Request;
 
-class TestController extends Controller implements IRestApiAble
+class TestController5 extends Controller implements IRestApiAble
 {
     use RestApiTrait;
     
