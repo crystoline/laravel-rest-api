@@ -524,13 +524,18 @@ trait RestApiTrait
      */
     public function destroy(int $id)
     {
+        /** @var Model $m */
         $m = self::getModel();
-        if ($m::find($id) === null) {
-            //return response()->json(['record was not found'], self::$STATUS_CODE_NOT_FOUND);
+        /** @var Model $data */
+        $data = $m::find($id);
+        if ($data === null) {
             return $this->respond(self::$STATUS_CODE_NOT_FOUND, ['message' => 'record was not found']);
         }
+
         try {
-            $m::destroy($id);
+            if($this->beforeDelete($data)){
+                $data->destroy($id);
+            }
         } catch (\Exception $exception) {
 
         }
@@ -541,10 +546,10 @@ trait RestApiTrait
 
     /**
      * Perform action before data deletion
-     * @param Request $request
+     * @param $data
      * @return bool
      */
-    public function beforeDelete(Request $request): bool
+    public function beforeDelete($data): bool
     {
         return true;
     }
